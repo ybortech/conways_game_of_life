@@ -1,0 +1,186 @@
+var _user$project$Conway$color = function (status) {
+	var _p0 = status;
+	if (_p0 === true) {
+		return 'black';
+	} else {
+		return 'white';
+	}
+};
+var _user$project$Conway$cellStyle = function (status) {
+	return _elm_lang$html$Html_Attributes$style(
+		_elm_lang$core$Native_List.fromArray(
+			[
+				{ctor: '_Tuple2', _0: 'border', _1: '1px solid black'},
+				{
+				ctor: '_Tuple2',
+				_0: 'backgroundColor',
+				_1: _user$project$Conway$color(status)
+			}
+			]));
+};
+var _user$project$Conway$cellSize = 14;
+var _user$project$Conway$cell = function (status) {
+	return A2(
+		_elm_lang$html$Html$td,
+		_elm_lang$core$Native_List.fromArray(
+			[
+				_elm_lang$html$Html_Attributes$height(_user$project$Conway$cellSize),
+				_elm_lang$html$Html_Attributes$width(_user$project$Conway$cellSize),
+				_user$project$Conway$cellStyle(status)
+			]),
+		_elm_lang$core$Native_List.fromArray(
+			[]));
+};
+var _user$project$Conway$row = function (array) {
+	var list = _elm_lang$core$Array$toList(array);
+	return A2(
+		_elm_lang$html$Html$tr,
+		_elm_lang$core$Native_List.fromArray(
+			[]),
+		A2(_elm_lang$core$List$map, _user$project$Conway$cell, list));
+};
+var _user$project$Conway$board = function (array) {
+	var list = _elm_lang$core$Array$toList(array);
+	return A2(
+		_elm_lang$html$Html$table,
+		_elm_lang$core$Native_List.fromArray(
+			[]),
+		A2(_elm_lang$core$List$map, _user$project$Conway$row, list));
+};
+var _user$project$Conway$view = function (model) {
+	return _user$project$Conway$board(model.state);
+};
+var _user$project$Conway$updateCell = F2(
+	function (cellMessage, state) {
+		var _p1 = A2(_elm_lang$core$Array$get, cellMessage.row, state);
+		if (_p1.ctor === 'Just') {
+			var newRow = A3(_elm_lang$core$Array$set, cellMessage.column, cellMessage.value, _p1._0);
+			return A3(_elm_lang$core$Array$set, cellMessage.row, newRow, state);
+		} else {
+			return state;
+		}
+	});
+var _user$project$Conway$socketServer = 'ws://localhost:4000/socket/websocket';
+var _user$project$Conway$Model = F2(
+	function (a, b) {
+		return {state: a, phxSocket: b};
+	});
+var _user$project$Conway$JoinMessage = function (a) {
+	return {state: a};
+};
+var _user$project$Conway$boardDecoder = A2(
+	_elm_lang$core$Json_Decode$object1,
+	_user$project$Conway$JoinMessage,
+	A2(
+		_elm_lang$core$Json_Decode_ops[':='],
+		'state',
+		_elm_lang$core$Json_Decode$array(
+			_elm_lang$core$Json_Decode$array(_elm_lang$core$Json_Decode$bool))));
+var _user$project$Conway$CellMessage = F3(
+	function (a, b, c) {
+		return {row: a, column: b, value: c};
+	});
+var _user$project$Conway$cellDecoder = A4(
+	_elm_lang$core$Json_Decode$object3,
+	_user$project$Conway$CellMessage,
+	A2(_elm_lang$core$Json_Decode_ops[':='], 'row', _elm_lang$core$Json_Decode$int),
+	A2(_elm_lang$core$Json_Decode_ops[':='], 'column', _elm_lang$core$Json_Decode$int),
+	A2(_elm_lang$core$Json_Decode_ops[':='], 'value', _elm_lang$core$Json_Decode$bool));
+var _user$project$Conway$SetCell = function (a) {
+	return {ctor: 'SetCell', _0: a};
+};
+var _user$project$Conway$SetBoard = function (a) {
+	return {ctor: 'SetBoard', _0: a};
+};
+var _user$project$Conway$initPhxSocket = function () {
+	var channel = A2(
+		_fbonetti$elm_phoenix_socket$Phoenix_Channel$onJoin,
+		_user$project$Conway$SetBoard,
+		_fbonetti$elm_phoenix_socket$Phoenix_Channel$init('conway:lobby'));
+	var socket = A4(
+		_fbonetti$elm_phoenix_socket$Phoenix_Socket$on,
+		'update_cell',
+		'conway:lobby',
+		_user$project$Conway$SetCell,
+		A4(
+			_fbonetti$elm_phoenix_socket$Phoenix_Socket$on,
+			'update_board',
+			'conway:lobby',
+			_user$project$Conway$SetBoard,
+			_fbonetti$elm_phoenix_socket$Phoenix_Socket$withDebug(
+				_fbonetti$elm_phoenix_socket$Phoenix_Socket$init(_user$project$Conway$socketServer))));
+	return A2(_fbonetti$elm_phoenix_socket$Phoenix_Socket$join, channel, socket);
+}();
+var _user$project$Conway$PhoenixMsg = function (a) {
+	return {ctor: 'PhoenixMsg', _0: a};
+};
+var _user$project$Conway$init = function () {
+	var _p2 = _user$project$Conway$initPhxSocket;
+	var phxSocket = _p2._0;
+	var phxCmd = _p2._1;
+	return {
+		ctor: '_Tuple2',
+		_0: {
+			state: _elm_lang$core$Array$fromList(
+				_elm_lang$core$Native_List.fromArray(
+					[
+						_elm_lang$core$Array$fromList(
+						_elm_lang$core$Native_List.fromArray(
+							[]))
+					])),
+			phxSocket: phxSocket
+		},
+		_1: A2(_elm_lang$core$Platform_Cmd$map, _user$project$Conway$PhoenixMsg, phxCmd)
+	};
+}();
+var _user$project$Conway$update = F2(
+	function (msg, model) {
+		var _p3 = msg;
+		switch (_p3.ctor) {
+			case 'SetCell':
+				var _p4 = A2(_elm_lang$core$Json_Decode$decodeValue, _user$project$Conway$cellDecoder, _p3._0);
+				if (_p4.ctor === 'Ok') {
+					var newState = A2(_user$project$Conway$updateCell, _p4._0, model.state);
+					return {
+						ctor: '_Tuple2',
+						_0: _elm_lang$core$Native_Utils.update(
+							model,
+							{state: newState}),
+						_1: _elm_lang$core$Platform_Cmd$none
+					};
+				} else {
+					return {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none};
+				}
+			case 'SetBoard':
+				var _p5 = A2(_elm_lang$core$Json_Decode$decodeValue, _user$project$Conway$boardDecoder, _p3._0);
+				if (_p5.ctor === 'Ok') {
+					return {
+						ctor: '_Tuple2',
+						_0: _elm_lang$core$Native_Utils.update(
+							model,
+							{state: _p5._0.state}),
+						_1: _elm_lang$core$Platform_Cmd$none
+					};
+				} else {
+					return {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none};
+				}
+			default:
+				var _p6 = A2(_fbonetti$elm_phoenix_socket$Phoenix_Socket$update, _p3._0, model.phxSocket);
+				var phxSocket = _p6._0;
+				var phxCmd = _p6._1;
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{phxSocket: phxSocket}),
+					_1: A2(_elm_lang$core$Platform_Cmd$map, _user$project$Conway$PhoenixMsg, phxCmd)
+				};
+		}
+	});
+var _user$project$Conway$subscriptions = function (model) {
+	return A2(_fbonetti$elm_phoenix_socket$Phoenix_Socket$listen, model.phxSocket, _user$project$Conway$PhoenixMsg);
+};
+var _user$project$Conway$main = {
+	main: _elm_lang$html$Html_App$program(
+		{init: _user$project$Conway$init, view: _user$project$Conway$view, update: _user$project$Conway$update, subscriptions: _user$project$Conway$subscriptions})
+};
